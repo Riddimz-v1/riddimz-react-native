@@ -1,0 +1,9 @@
+export const formatCurrency = (amount: number) => {
+    return `${amount.toFixed(2)} RDMZ`;
+};
+
+export const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+};
