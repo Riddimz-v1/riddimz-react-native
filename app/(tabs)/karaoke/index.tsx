@@ -1,11 +1,13 @@
-import { StyleSheet } from 'react-native';
+import { StyleSheet, View, ScrollView, FlatList, TouchableOpacity, RefreshControl } from 'react-native';
 import { ThemedText } from '@/components/atoms/ThemedText';
 import { ThemedView } from '@/components/atoms/ThemedView';
 import { Button } from '@/components/atoms/Button';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { useWallet } from '@/hooks/useWallet';
+import { Colors } from '@/utils/constants';
 
 import { useEffect, useState } from 'react';
-import { FlatList, TouchableOpacity, RefreshControl } from 'react-native';
 import { karaokeService } from '@/services/api/karaoke';
 import { RoomResponse } from '@/services/api/types';
 import { useUserStore } from '@/stores/user';
@@ -102,10 +104,6 @@ export default function KaraokeScreen() {
     </ThemedView>
   );
 }
-
-import { View, ScrollView } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useWallet } from '@/hooks/useWallet';
 
 const styles = StyleSheet.create({
   container: {
