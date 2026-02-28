@@ -23,7 +23,7 @@ export const Colors = {
 
 export const BRAND_GRADIENT = ['#7633b5', '#4d60c0', '#d7475f', '#50fdba'];
 
-const NGROK_URL = 'https://63fe-102-90-81-147.ngrok-free.app';
+const NGROK_URL = 'https://riddimz-python.onrender.com';
 
 export const BASE_URL = NGROK_URL;
 export const API_URL = `${BASE_URL}/graphql`;
