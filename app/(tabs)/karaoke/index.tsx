@@ -3,7 +3,7 @@ import { ThemedText } from '@/components/atoms/ThemedText';
 import { ThemedView } from '@/components/atoms/ThemedView';
 import { Button } from '@/components/atoms/Button';
 import { useRouter } from 'expo-router';
-
+import { Colors } from '@/utils/constants';
 import { useEffect, useState } from 'react';
 import { FlatList, TouchableOpacity, RefreshControl } from 'react-native';
 import { karaokeService } from '@/services/api/karaoke';
