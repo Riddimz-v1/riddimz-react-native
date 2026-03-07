@@ -12,8 +12,9 @@ import {
 import { ThemedText } from '@/components/atoms/ThemedText';
 import { ThemedView } from '@/components/atoms/ThemedView';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/utils/constants';
+import { useEffect, useState } from 'react';
+import { FlatList, TouchableOpacity, RefreshControl } from 'react-native';
 import { karaokeService } from '@/services/api/karaoke';
 import { RoomResponse } from '@/services/api/types';
 import { useUserStore } from '@/stores/user';
