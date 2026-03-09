@@ -5,9 +5,9 @@ class PeerManager {
     localStream: MediaStream | null = null;
     onStream: ((userId: string, stream: MediaStream) => void) | null = null;
     
-    initialize(userId: string, localStream: MediaStream) {
+    initialize(userId: string, localStream?: MediaStream) {
         if (this.peer) return;
-        this.localStream = localStream;
+        this.localStream = localStream || null;
 
         this.peer = new Peer(userId, {
             host: 'peerjs.riddimz.app', // Custom peer server
@@ -21,7 +21,11 @@ class PeerManager {
 
         this.peer.on('call', (call) => {
             console.log('[PeerManager] Receiving call from:', call.peer);
-            call.answer(this.localStream!); 
+            if (this.localStream) {
+                call.answer(this.localStream);
+            } else {
+                call.answer();
+            }
             call.on('stream', (remoteStream) => {
                 if (this.onStream) this.onStream(call.peer, remoteStream);
             });
