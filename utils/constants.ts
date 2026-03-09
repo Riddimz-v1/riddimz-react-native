@@ -23,12 +23,12 @@ export const Colors = {
 
 export const BRAND_GRADIENT = ['#7633b5', '#4d60c0', '#d7475f', '#50fdba'];
 
-const NGROK_URL = 'https://riddimz-python.onrender.com';
+const SERVER_URL = 'https://riddimz-python.onrender.com';
 
-export const BASE_URL = NGROK_URL;
+export const BASE_URL = SERVER_URL;
 export const API_URL = `${BASE_URL}/graphql`;
 export const REST_API_URL = BASE_URL;
-export const WS_URL = NGROK_URL.replace('https://', 'wss://');
+export const WS_URL = SERVER_URL.replace('https://', 'wss://');
 
 export const WEB3_CONFIG = {
     rpcEndpoint: 'https://api.mainnet-beta.solana.com',
