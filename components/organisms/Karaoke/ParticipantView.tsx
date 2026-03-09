@@ -74,7 +74,7 @@ export function ParticipantView({
         {currentSong ? (
           <>
             <ThemedText style={styles.lyricsLine}>"I'm blinded by the lights..."</ThemedText>
-            <ThemedText style={styles.lyricsTrack}>{currentSong.title}</ThemedText>
+            <ThemedText style={styles.lyricsTrack}>{currentSong.track_title || currentSong.title || 'Unknown Song'}</ThemedText>
           </>
         ) : (
           <ThemedText style={styles.lyricsHint}>Waiting for a song...</ThemedText>

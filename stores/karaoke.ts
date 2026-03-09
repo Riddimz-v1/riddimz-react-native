@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { karaokeService } from '../services/api/karaoke';
 
-export type UserRole = 'host' | 'peer' | 'guest';
+export type UserRole = 'host' | 'peer' | 'guest' | '';
 
 interface KaraokeState {
     roomId: string | null;

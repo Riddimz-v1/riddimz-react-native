@@ -13,12 +13,18 @@ import { ChatMessage } from '@/components/organisms/Karaoke/ChatPanel';
 import { HostView } from '@/components/organisms/Karaoke/HostView';
 import { ParticipantView } from '@/components/organisms/Karaoke/ParticipantView';
 import { GuestView } from '@/components/organisms/Karaoke/GuestView';
+import { useNotificationStore } from '@/stores/notifications';
+import { RealtimeToastContainer } from '@/components/molecules/RealtimeToast';
 
 export default function KaraokeRoomScreen() {
   const { roomId } = useLocalSearchParams<{ roomId: string }>();
   const router     = useRouter();
-  const { profile } = useUserStore();
+  const { profile, fetchProfile } = useUserStore();
   const { address } = useWallet();
+
+  useEffect(() => {
+    if (!profile) fetchProfile();
+  }, [profile, fetchProfile]);
 
   // ── Zustand — selective subscriptions (existing pattern) ──────────────────
   const currentSong       = useKaraokeStore(s => s.currentSong);
@@ -43,7 +49,10 @@ export default function KaraokeRoomScreen() {
   const setActiveStream   = useKaraokeStore(s => s.setActiveStream);
   const setRole           = useKaraokeStore(s => s.setRole);
 
+  const addNotification   = useNotificationStore(s => s.addNotification);
+
   const [socket, setSocket]   = useState<KaraokeSocket | null>(null);
+  const socketRef = useRef<KaraokeSocket | null>(null);
   const [isMicOn, setIsMicOn] = useState(true);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const isInitRef = useRef(false);
@@ -64,26 +73,91 @@ export default function KaraokeRoomScreen() {
 
     const initRoom = async () => {
       try {
-        const rooms = await karaokeService.getRooms();
-        const room  = rooms.find(r => r.id === roomId);
+        console.log('[Karaoke] Initializing room with ID:', roomId);
+        let room;
+        
+        try {
+          room = await karaokeService.getRoom(roomId);
+        } catch (e) {
+          console.warn('[Karaoke] getRoom(id) failed, falling back to list find...', e);
+          const allRooms = await karaokeService.getRooms();
+          console.log('[Karaoke] All rooms list:', allRooms.map(r => ({ id: r.id, name: r.name })));
+          room = allRooms.find(r => String(r.id) === String(roomId));
+        }
+
+        console.log('[Karaoke] Room matched:', room);
+
+        if (!room) {
+          Alert.alert('Error', 'Room not found.');
+          router.replace('/(tabs)/karaoke');
+          return;
+        }
+
         if (!isSubscribed) return;
 
-        const myUserId = profile.id.toString();
-        const role: UserRole = room?.host_id === myUserId ? 'host' : 'guest';
-        await joinRoom(roomId, role);
+        const myId = profile.id.toString();
+        const myWallet = address?.toLowerCase();
+        
+        console.log('[Karaoke] Role Check:', {
+          hostId: room.host_id,
+          myId,
+          myWallet,
+          participants: room.current_participants
+        });
 
+        let role: UserRole = 'guest';
+        const isHost = String(room.host_id) === myId || 
+                      (myWallet && String(room.host_id).toLowerCase() === myWallet);
+
+        if (isHost) {
+          role = 'host';
+        } else {
+          // Check if user is already a peer (performer)
+          const isPeer = room.current_participants?.some((p: any) => 
+            String(p) === myId || (myWallet && String(p).toLowerCase() === myWallet)
+          );
+          if (isPeer) {
+            role = 'peer';
+          }
+        }
+
+        console.log('[Karaoke] Assigned Role:', role);
+
+        // 1. Sync store state
+        await joinRoom(roomId, role);
+        
+        // Add other existing participants to store
+        room.current_participants?.forEach((uid: string) => {
+          if (uid !== myId && uid !== myWallet) {
+            addParticipant(uid);
+          }
+        });
+
+        // 2. Setup PeerManager
+        peerManager.onStream = (userId, stream) => {
+          console.log('[Karaoke] Received remote stream from:', userId);
+          addRemoteStream(userId, stream);
+        };
+
+        if (role === 'host' || role === 'peer') {
+          peerManager.initialize(myId);
+        }
+
+        // 3. Setup Socket
         const ks = new KaraokeSocket(roomId, (message) => {
-          const myId = profile.id.toString();
           switch (message.event) {
             case 'track_change':
               setSong(message.data);
               break;
             case 'user_joined':
               const { userId, role: userRoleJoined } = message.data;
-              if (userId !== myId && userId !== address) {
+              const isMe = userId === myId || (myWallet && userId.toLowerCase() === myWallet);
+              
+              if (!isMe) {
                 if (userRoleJoined === 'host' || userRoleJoined === 'peer') {
-                  addParticipant(userId);
-                  peerManager.callPeer(userId);
+                   addParticipant(userId);
+                   peerManager.callPeer(userId);
+                   addNotification('performer_added', `${userId.slice(0, 6)}… is performing!`);
                 } else {
                   addGuest(userId);
                 }
@@ -98,15 +172,25 @@ export default function KaraokeRoomScreen() {
               break;
             case 'join_request':
               addJoinRequest(message.data.userId);
+              addNotification('join_request', `${message.data.userId.slice(0, 6)}… wants to sing!`);
               break;
             case 'join_approved':
-              if (message.data.userId === myId || message.data.userId === address) {
+              const approvedId = message.data.userId;
+              const isMeApproved = approvedId === myId || (myWallet && approvedId.toLowerCase() === myWallet);
+              
+              if (isMeApproved) {
                 setRole('peer');
+                peerManager.initialize(myId); // Initialize as performer
                 Alert.alert('Accepted! 🎤', 'You can now perform live.');
               } else {
-                addParticipant(message.data.userId);
-                removeGuest(message.data.userId);
+                addParticipant(approvedId);
+                removeGuest(approvedId);
+                addNotification('join_approved', `${approvedId.slice(0, 6)}… is now a performer!`);
               }
+              removeJoinRequest(approvedId);
+              break;
+            case 'gift':
+              addNotification('gift', `${message.data.senderId?.slice(0, 6) ?? 'Someone'} sent a gift! 🎁`);
               break;
             case 'chat':
               setMessages(prev => [
@@ -128,8 +212,9 @@ export default function KaraokeRoomScreen() {
           }
         });
 
-        ks.connect();
+        await ks.connect();
         setSocket(ks);
+        socketRef.current = ks;
       } catch (err) {
         console.error('[Karaoke] Error initializing room:', err);
       }
@@ -140,11 +225,12 @@ export default function KaraokeRoomScreen() {
     return () => {
       isSubscribed = false;
       isInitRef.current = false;
-      socket?.disconnect();
+      socketRef.current?.disconnect();
+      socketRef.current = null;
       peerManager.destroy();
       leaveRoom();
     };
-  }, [roomId]);
+  }, [roomId, profile?.id]);
 
   // ── Shared callbacks ───────────────────────────────────────────────────────
   const handleSendMessage = useCallback((text: string) => {
@@ -158,7 +244,7 @@ export default function KaraokeRoomScreen() {
     };
     setMessages(prev => [...prev, msg]);
     socket?.sendMessage('chat', {
-      userId:      profile?.id,
+      userId:      profile?.id?.toString() ?? 'anon',
       displayName: profile?.username,
       text,
     });
@@ -211,52 +297,60 @@ export default function KaraokeRoomScreen() {
     ]);
   }, [router]);
 
- 
   if (userRole === 'host') {
     return (
-      <HostView
-        roomId={roomId}
-        socket={socket}
-        messages={messages}
-        onSendMessage={handleSendMessage}
-        isMicOn={isMicOn}
-        onToggleMic={handleToggleMic}
-        onEndSession={handleEndSession}
-        participants={participants}
-        guests={guests}
-        pendingRequests={pendingRequests}
-        onAcceptRequest={handleAcceptRequest}
-        currentSong={currentSong}
-      />
+      <>
+        <HostView
+          roomId={roomId}
+          socket={socket}
+          messages={messages}
+          onSendMessage={handleSendMessage}
+          isMicOn={isMicOn}
+          onToggleMic={handleToggleMic}
+          onEndSession={handleEndSession}
+          participants={participants}
+          guests={guests}
+          pendingRequests={pendingRequests}
+          onAcceptRequest={handleAcceptRequest}
+          currentSong={currentSong}
+        />
+        <RealtimeToastContainer />
+      </>
     );
   }
 
   if (userRole === 'peer') {
     return (
-      <ParticipantView
-        messages={messages}
-        onSendMessage={handleSendMessage}
-        isMicOn={isMicOn}
-        onToggleMic={handleToggleMic}
-        onLeave={handleLeave}
-        currentSong={currentSong}
-      />
+      <>
+        <ParticipantView
+          messages={messages}
+          onSendMessage={handleSendMessage}
+          isMicOn={isMicOn}
+          onToggleMic={handleToggleMic}
+          onLeave={handleLeave}
+          currentSong={currentSong}
+        />
+        <RealtimeToastContainer />
+      </>
     );
   }
 
   return (
-    <GuestView
-      socket={socket}
-      messages={messages}
-      onSendMessage={handleSendMessage}
-      participants={participants}
-      guests={guests}
-      activeStreamId={activeStreamId}
-      onSwitchStream={setActiveStream}
-      onRequestToJoin={handleRequestToJoin}
-      currentSong={currentSong}
-      onLeave={handleLeave}
-    />
+    <>
+      <GuestView
+        socket={socket}
+        messages={messages}
+        onSendMessage={handleSendMessage}
+        participants={participants}
+        guests={guests}
+        activeStreamId={activeStreamId}
+        onSwitchStream={setActiveStream}
+        onRequestToJoin={handleRequestToJoin}
+        currentSong={currentSong}
+        onLeave={handleLeave}
+      />
+      <RealtimeToastContainer />
+    </>
   );
 }
 

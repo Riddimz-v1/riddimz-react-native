@@ -169,7 +169,7 @@ export function HostView({
         {currentSong ? (
           <>
             <ThemedText style={styles.lyricsLine}>"I'm blinded by the lights..."</ThemedText>
-            <ThemedText style={styles.lyricsTrack}>{currentSong.title}</ThemedText>
+            <ThemedText style={styles.lyricsTrack}>{currentSong.track_title || currentSong.title || 'Unknown Song'}</ThemedText>
           </>
         ) : (
           <ThemedText style={styles.lyricsHint}>Search or upload a song to start</ThemedText>
@@ -304,7 +304,7 @@ export function HostView({
                       <ThemedText style={styles.queueNumText}>{i + 1}</ThemedText>
                     </View>
                     <View style={{ flex: 1 }}>
-                      <ThemedText style={styles.queueTitle} numberOfLines={1}>{track.title}</ThemedText>
+                      <ThemedText style={styles.queueTitle} numberOfLines={1}>{track.track_title || track.title || 'Unknown Song'}</ThemedText>
                       <ThemedText style={styles.queueDuration}>{track.duration ?? ''}</ThemedText>
                     </View>
                     {i === 0 && <Ionicons name="radio" size={14} color={PRIMARY} />}

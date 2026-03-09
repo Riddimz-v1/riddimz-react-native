@@ -6,6 +6,10 @@ export const karaokeService = {
     return restClient.get<RoomResponse[]>(`/karaoke/rooms?skip=${skip}&limit=${limit}`, { auth: false });
   },
 
+  getRoom: async (roomId: string): Promise<RoomResponse> => {
+    return restClient.get<RoomResponse>(`/karaoke/rooms/${roomId}`, { auth: false });
+  },
+
   createRoom: async (data: RoomCreate): Promise<RoomResponse> => {
     return restClient.post<RoomResponse>('/karaoke/rooms', data);
   },
