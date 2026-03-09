@@ -23,18 +23,19 @@ export interface UserResponse {
   username: string;
   email: string;
   wallet_address: string;
-  is_managed_wallet: boolean;
+  display_name: string;
+  bio: string;
+  avatar_url: string;
   is_active: boolean;
   is_live: boolean;
-  current_stream_id?: string;
-  bio?: string;
-  profile_image_url?: string;
+  current_stream_id: string;
+  is_managed_wallet?: boolean;
 }
 
 export interface UserEarnings {
-  total_earned: number;
-  available_balance: number;
-  currency: string;
+  user_id: number;
+  total_earnings: number;
+  pending_earnings: number;
 }
 
 export interface WalletConnect {
@@ -216,8 +217,18 @@ export interface KaraokeSearchResponse {
 }
 
 export interface GiftParticipantRequest {
-  recipient_user_id: string | number;
-  gift_name: string;
+  recipient_id: string;
+  amount: number;
+  gift_type: string;
+}
+
+export interface QueueItem {
+  user_id: string;
+  user_name: string;
+  track_id: string;
+  track_title: string;
+  artist_id: string;
+  lyrics?: string;
 }
 
 export interface RoomResponse {
@@ -225,7 +236,8 @@ export interface RoomResponse {
   name: string;
   host_id: string;
   current_track_id?: string;
-  queue: string[];
+  current_participants: string[];
+  queue: (string | QueueItem)[];
   soundtrack_url?: string;
   lyrics_url?: string;
 }

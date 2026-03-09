@@ -2,14 +2,18 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import { UserResponse } from '../services/api/types';
+import { userService } from '../services/api/user';
+
 interface UserState {
-    profile: any | null;
+    profile: UserResponse | null;
     settings: {
         notifications: boolean;
         publicProfile: boolean;
     };
     
-    updateProfile: (profile: any) => void;
+    updateProfile: (profile: UserResponse) => void;
+    fetchProfile: () => Promise<void>;
     toggleNotification: () => void;
 }
 
@@ -23,6 +27,14 @@ export const useUserStore = create<UserState>()(
             },
             
             updateProfile: (profile) => set({ profile }),
+            fetchProfile: async () => {
+                try {
+                    const profile = await userService.getProfile();
+                    set({ profile });
+                } catch (error) {
+                    console.error('Error fetching profile:', error);
+                }
+            },
             toggleNotification: () => set((state) => ({ 
                 settings: { ...state.settings, notifications: !state.settings.notifications } 
             })),

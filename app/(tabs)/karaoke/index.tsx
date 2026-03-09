@@ -8,24 +8,31 @@ import {
   Modal,
   Switch,
   Alert,
+  FlatList,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from '@/components/atoms/ThemedText';
 import { ThemedView } from '@/components/atoms/ThemedView';
 import { useRouter } from 'expo-router';
 import { Colors } from '@/utils/constants';
 import { useEffect, useState } from 'react';
-import { FlatList, TouchableOpacity, RefreshControl } from 'react-native';
 import { karaokeService } from '@/services/api/karaoke';
-import { RoomResponse } from '@/services/api/types';
+import { RoomResponse, QueueItem } from '@/services/api/types';
 import { useUserStore } from '@/stores/user';
-import { useEffect, useState } from 'react';
+
 
 const PRIMARY = Colors.dark.primary;
 type FilterTab = 'all' | 'trending' | 'mine';
 
 export default function KaraokeScreen() {
   const router = useRouter();
-  const { profile } = useUserStore();
+  const { profile, fetchProfile } = useUserStore();
+
+  useEffect(() => {
+    if (!profile) {
+      fetchProfile();
+    }
+  }, [profile, fetchProfile]);
 
   const [rooms, setRooms]                 = useState<RoomResponse[]>([]);
   const [loading, setLoading]             = useState(true);
@@ -50,9 +57,13 @@ export default function KaraokeScreen() {
   };
 
   useEffect(() => { fetchRooms(); }, []);
+  // console.log("rooms",rooms)
+  // console.log("profile",profile)
 
   const myUserId  = profile?.id?.toString();
+  // console.log("myUserId",myUserId);
   const myRooms   = rooms.filter(r => r.host_id === myUserId);
+  // console.log("myRooms",myRooms)
   const otherRooms= rooms.filter(r => r.host_id !== myUserId);
 
   const visibleRooms =
@@ -120,7 +131,11 @@ export default function KaraokeScreen() {
           {item.queue?.length > 0 && (
             <View style={styles.metaRow}>
               <Ionicons name="musical-notes" size={11} color={PRIMARY} />
-              <ThemedText style={styles.metaText} numberOfLines={1}>{item.queue[0]}</ThemedText>
+              <ThemedText style={styles.metaText} numberOfLines={1}>
+                {typeof item.queue[0] === 'string' 
+                  ? item.queue[0] 
+                  : (item.queue[0] as QueueItem)?.track_title || 'Music session'}
+              </ThemedText>
             </View>
           )}
         </View>

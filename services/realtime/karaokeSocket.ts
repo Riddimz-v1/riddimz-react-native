@@ -1,4 +1,5 @@
 import { WS_URL } from '@/utils/constants';
+import { storage } from '@/utils/storage';
 export type KaraokeEvent =
   | 'queue_update'| 'track_change'| 'user_left'
   | 'user_joined'
@@ -8,6 +9,7 @@ export type KaraokeEvent =
   | 'session_ended'
   | 'soundtrack_play'
   | 'soundtrack_pause'
+  | 'gift'
   | 'chat'; 
 
 
@@ -31,6 +33,14 @@ export type KaraokeSocketMessage =
         displayName?: string;
         text: string;
       };
+    }
+  | {
+      event: 'gift';
+      data: {
+        senderId: string;
+        giftType: string;
+        amount: number;
+      };
     };
 
 
@@ -44,11 +54,20 @@ export class KaraokeSocket {
     this.onMessage = onMessage;
   }
 
-  connect() {
-    this.socket = new WebSocket(`${WS_URL}/karaoke/ws/join/${this.roomId}`);
+  async connect() {
+    if (!this.roomId) {
+      console.error('❌ Cannot connect to Karaoke WebSocket: roomId is missing');
+      return;
+    }
+
+    const token = await storage.getItem('auth_token');
+    const url = `${WS_URL}/karaoke/ws/join/${this.roomId}${token ? `?token=${token}` : ''}`;
+    
+    console.log(`📡 Connecting to Karaoke WebSocket: ${url}`);
+    this.socket = new WebSocket(url);
 
     this.socket.onopen = () => {
-      console.log('🎤 Connected to Karaoke WebSocket');
+      console.log('🎤 Connected to Karaoke WebSocket successfully');
     };
 
     this.socket.onmessage = (event) => {
@@ -60,12 +79,12 @@ export class KaraokeSocket {
       }
     };
 
-    this.socket.onclose = () => {
-      console.log('🔌 Karaoke WebSocket closed');
+    this.socket.onclose = (event) => {
+      console.log('🔌 Karaoke WebSocket closed. Code:', event.code, 'Reason:', event.reason);
     };
 
     this.socket.onerror = (error) => {
-      console.error('⚠️ Karaoke WebSocket error', error);
+      console.error('⚠️ Karaoke WebSocket error:', error);
     };
   }
 

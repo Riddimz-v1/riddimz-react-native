@@ -147,7 +147,7 @@ export function GuestView({
       {currentSong && (
         <View style={styles.lyricsArea} pointerEvents="none">
           <ThemedText style={styles.lyricsLine}>"I'm blinded by the lights..."</ThemedText>
-          <ThemedText style={styles.lyricsTrack}>{currentSong.title}</ThemedText>
+          <ThemedText style={styles.lyricsTrack}>{currentSong.track_title || currentSong.title || 'Unknown Song'}</ThemedText>
         </View>
       )}
 
