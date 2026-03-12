@@ -3,13 +3,18 @@ import { Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function TabLayout() {
   const { colors } = useTheme();
   const { isLargeScreen } = useResponsive();
+  const insets = useSafeAreaInsets();
 
   const isWeb = Platform.OS === 'web';
   const hideTabs = isLargeScreen && isWeb;
+
+  // On Android, the bottom inset accounts for gesture navigation / button nav bar
+  const androidTabBarHeight = 58 + insets.bottom;
 
   return (
     <Tabs
@@ -29,12 +34,11 @@ export default function TabLayout() {
           default: {
             backgroundColor: '#000',
             borderTopWidth: 0,
-            height: 65,
-            paddingBottom: 10,
+            height: androidTabBarHeight,
+            paddingBottom: insets.bottom + 4,
             paddingTop: 8,
           },
         }),
-        // THIS is what completes the task - SpotifyMixUI on tab labels
         tabBarLabelStyle: {
           fontFamily: 'SpotifyMixUI-Bold',
           fontSize: 10,
@@ -95,7 +99,7 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="profile/index"
+        name="profile"
         options={{
           title: 'Profile',
           tabBarIcon: ({ color, focused }) => (
@@ -111,11 +115,7 @@ export default function TabLayout() {
       {/* Hidden screens */}
       <Tabs.Screen name="karaoke/create" options={{ href: null }} />
       <Tabs.Screen name="karaoke/[roomId]/index" options={{ href: null }} />
-      <Tabs.Screen name="profile/edit" options={{ href: null }} />
-      <Tabs.Screen name="profile/wallet/index" options={{ href: null }} />
-      <Tabs.Screen name="profile/wallet/send" options={{ href: null }} />
-      <Tabs.Screen name="profile/wallet/receive" options={{ href: null }} />
-      <Tabs.Screen name="profile/wallet/export-key" options={{ href: null }} />
+
     </Tabs>
   );
 }

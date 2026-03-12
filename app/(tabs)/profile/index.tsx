@@ -101,12 +101,12 @@ export default function ProfileScreen() {
                                 <View style={styles.earningsBreakdown}>
                                     <View style={styles.earningItem}>
                                         <ThemedText style={styles.earningLabel}>Total Earned</ThemedText>
-                                        <ThemedText style={styles.earningValue}>{earnings.total_earned} {earnings.currency}</ThemedText>
+                                        <ThemedText style={styles.earningValue}>{earnings.total_earnings.toFixed(2)} RDMZ</ThemedText>
                                     </View>
                                     <View style={styles.divider} />
                                     <View style={styles.earningItem}>
                                         <ThemedText style={styles.earningLabel}>Pending</ThemedText>
-                                        <ThemedText style={styles.earningValue}>0.00 {earnings.currency}</ThemedText>
+                                        <ThemedText style={styles.earningValue}>{earnings.pending_earnings.toFixed(2)} RDMZ</ThemedText>
                                     </View>
                                 </View>
                             )}
@@ -117,19 +117,19 @@ export default function ProfileScreen() {
                 <View style={styles.section}>
                     <ThemedText type="subtitle" style={styles.sectionTitle}>Account Settings</ThemedText>
                     <View style={styles.card}>
-                        <TouchableOpacity style={styles.settingItem} onPress={() => router.push('/(tabs)/profile')}>
+                        <TouchableOpacity style={styles.settingItem} onPress={() => router.push('/(tabs)/profile/edit' as any)}>
                             <Ionicons name="person-outline" size={20} color="#fff" />
                             <ThemedText style={styles.settingText}>Edit Profile</ThemedText>
                             <Ionicons name="chevron-forward" size={18} color="#444" />
                         </TouchableOpacity>
                         <View style={styles.itemDivider} />
-                        <TouchableOpacity style={styles.settingItem}>
+                        <TouchableOpacity style={styles.settingItem} onPress={() => router.push('/(tabs)/profile/notifications' as any)}>
                             <Ionicons name="notifications-outline" size={20} color="#fff" />
                             <ThemedText style={styles.settingText}>Notifications</ThemedText>
                             <Ionicons name="chevron-forward" size={18} color="#444" />
                         </TouchableOpacity>
                         <View style={styles.itemDivider} />
-                        <TouchableOpacity style={styles.settingItem}>
+                        <TouchableOpacity style={styles.settingItem} onPress={() => router.push('/(tabs)/profile/privacy' as any)}>
                             <Ionicons name="shield-checkmark-outline" size={20} color="#fff" />
                             <ThemedText style={styles.settingText}>Privacy & Security</ThemedText>
                             <Ionicons name="chevron-forward" size={18} color="#444" />
