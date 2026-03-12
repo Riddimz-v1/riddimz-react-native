@@ -1,7 +1,7 @@
 # Riddimz API Documentation
 
 This document details the API endpoints for the Riddimz backend.
-Base URL: `http://localhost:8000` (Local Development)
+Base URL: `https://riddimz-python.onrender.com` (Production)
 
 ## 1. Authentication (`/auth`)
 

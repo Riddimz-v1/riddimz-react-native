@@ -1,3 +1,4 @@
+import 'react-native-get-random-values'; // Polyfill for crypto.getRandomValues() required by @solana/web3.js
 import { Connection, clusterApiUrl, PublicKey } from '@solana/web3.js';
 import { WEB3_CONFIG } from '@/utils/constants';
 

@@ -25,6 +25,17 @@ export default function LoginScreen() {
     setLoading(true);
     try {
         await authService.login({ email, password });
+        // Fetch profile and wallet details immediately after login
+        const { useUserStore } = require('@/stores/user');
+        const { useWalletStore } = require('@/stores/wallet');
+        try {
+            await Promise.all([
+                useUserStore.getState().fetchProfile(),
+                useWalletStore.getState().connect()
+            ]);
+        } catch (fetchErr) {
+            console.log('Post-login initialization failed:', fetchErr);
+        }
         router.replace('/(tabs)/home');
     } catch (err: any) {
         console.error(err);

@@ -39,25 +39,30 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 24,
     fontFamily: 'SpotifyMixUI-Regular',
+    includeFontPadding: false,
   },
   defaultSemiBold: {
     fontSize: 16,
     lineHeight: 24,
     fontFamily: 'SpotifyMixUI-Bold',
+    includeFontPadding: false,
   },
   title: {
     fontSize: 32,
     fontFamily: 'SpotifyMixUI-TitleBold',
     lineHeight: 32,
+    includeFontPadding: false,
   },
   subtitle: {
     fontSize: 20,
     fontFamily: 'SpotifyMixUI-Bold',
+    includeFontPadding: false,
   },
   link: {
     lineHeight: 30,
     fontSize: 16,
     color: '#4d60c0',
     fontFamily: 'SpotifyMixUI-Regular',
+    includeFontPadding: false,
   },
 });

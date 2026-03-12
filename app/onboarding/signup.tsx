@@ -38,6 +38,18 @@ export default function SignupScreen() {
             password
         });
         
+        // Fetch profile and wallet details immediately after registration
+        const { useUserStore } = require('@/stores/user');
+        const { useWalletStore } = require('@/stores/wallet');
+        try {
+            await Promise.all([
+                useUserStore.getState().fetchProfile(),
+                useWalletStore.getState().connect()
+            ]);
+        } catch (fetchErr) {
+            console.log('Post-signup initialization failed:', fetchErr);
+        }
+        
         router.replace('/(tabs)/home');
     } catch (err: any) {
         console.error(err);
