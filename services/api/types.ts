@@ -27,9 +27,22 @@ export interface UserResponse {
   bio: string;
   avatar_url: string;
   is_active: boolean;
+  is_verified: boolean;
   is_live: boolean;
-  current_stream_id: string;
+  current_stream_id: string | null;
   is_managed_wallet?: boolean;
+}
+
+export interface UserPublicResponse {
+  id: number;
+  username: string;
+  display_name: string;
+  bio: string;
+  avatar_url: string;
+  is_active: boolean;
+  is_verified: boolean;
+  is_live: boolean;
+  current_stream_id: string | null;
 }
 
 export interface UserEarnings {
@@ -149,6 +162,12 @@ export interface TokenGift {
   message?: string;
 }
 
+export interface Gift {
+  id: number;
+  name: string;
+  value_rdmz: number;
+}
+
 export interface ManagedWalletResponse {
   wallet_address: string;
   private_key: string;
@@ -201,19 +220,21 @@ export interface SoundtrackUploadResponse {
 }
 
 export interface LyricsSyncResponse {
-  room_id: string;
   instrumental_url: string;
-  lyrics_vtt_url: string;
-  full_lyrics: string;
+  vocals_url: string;
+  vtt_url: string;
+  lyrics: string;
+}
+
+export interface KaraokeTrack {
+  title: string;
+  url: string;
+  thumbnail: string;
+  duration: string;
 }
 
 export interface KaraokeSearchResponse {
-  tracks: Array<{
-    title: string;
-    url: string;
-    thumbnail: string;
-    duration: string;
-  }>;
+  tracks: KaraokeTrack[];
 }
 
 export interface GiftParticipantRequest {

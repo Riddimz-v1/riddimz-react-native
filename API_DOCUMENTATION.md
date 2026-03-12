@@ -1,7 +1,7 @@
 # Riddimz API Documentation
 
 This document details the API endpoints for the Riddimz backend.
-Base URL: `https://riddimz-python.onrender.com` (Production)
+Base URL: `http://localhost:8000` (Local Development)
 
 ## 1. Authentication (`/auth`)
 
@@ -9,7 +9,7 @@ Base URL: `https://riddimz-python.onrender.com` (Production)
 Create a new user account. This automatically generates a managed Solana wallet for the user.
 
 - **Endpoint**: `POST /auth/register`
-- **Body**:
+- **Body** (JSON):
   ```json
   {
     "username": "string",
@@ -17,53 +17,40 @@ Create a new user account. This automatically generates a managed Solana wallet 
     "password": "securepassword"
   }
   ```
-- **Response**:
+- **Response** (200 OK):
   ```json
   {
     "access_token": "jwt_token_string",
     "token_type": "bearer"
   }
   ```
+- **Status Codes**: 200 (Success), 400 (Username/Email already taken)
 
 ### Login
 Login with email and password.
 
 - **Endpoint**: `POST /auth/login`
-- **Body**:
+- **Body** (JSON):
   ```json
   {
     "email": "user@example.com",
     "password": "yourpassword"
   }
   ```
-- **Response**:
-  ```json
-  {
-    "access_token": "jwt_token_string",
-    "token_type": "bearer"
-  }
-  ```
+- **Response** (200 OK): `Token` object (same as register)
+- **Status Codes**: 200 (Success), 401 (Unauthorized)
 
 ### Google Auth
 Login or register using Google OAuth.
 
 - **Endpoint**: `POST /auth/google`
-- **Body**:
+- **Body** (JSON):
   ```json
   {
     "id_token": "google_id_token_from_frontend"
   }
   ```
-- **Response**: JWT Token (same as login)
-
-- **Response**:
-  ```json
-  {
-    "wallet_address": "SolanaAddress...",
-    "private_key": "Base58EncodedPrivateKey...",
-    "instructions": "KEEP THIS SECURE..."
-  }
-  ```
+- **Response** (200 OK): JWT Token (same as login)
 
 ### Export Private Key
 Export the private key of the managed wallet. **Protected Endpoint**.
@@ -71,7 +58,7 @@ Export the private key of the managed wallet. **Protected Endpoint**.
 - **Endpoint**: `GET /auth/export-key`
 - **Query Params**:
   - `password`: Current user's password (for verification)
-- **Response**:
+- **Response** (200 OK):
   ```json
   {
     "wallet_address": "SolanaAddress...",
@@ -84,7 +71,7 @@ Export the private key of the managed wallet. **Protected Endpoint**.
 ### Change Password
 Change the password for the current logged-in user.
 - **Endpoint**: `POST /auth/change-password`
-- **Body**:
+- **Body** (JSON):
   ```json
   {
     "old_password": "currentpassword",
@@ -95,13 +82,13 @@ Change the password for the current logged-in user.
 ### Forgot Password
 Initiate password recovery flow.
 - **Endpoint**: `POST /auth/forgot-password`
-- **Body**: `{ "email": "user@example.com" }`
+- **Body** (JSON): `{ "email": "user@example.com" }`
 - **Response**: Generic success message.
 
 ### Reset Password
-Reset password using a token received via email (logged to console in dev).
+Reset password using a token received via email.
 - **Endpoint**: `POST /auth/reset-password`
-- **Body**:
+- **Body** (JSON):
   ```json
   {
     "token": "reset_token_string",
@@ -109,53 +96,73 @@ Reset password using a token received via email (logged to console in dev).
   }
   ```
 
+### Refresh Token
+Refresh the JWT access token.
+- **Endpoint**: `POST /auth/refresh`
+- **Response**: New access token.
+
 ---
 
 ## 2. User (`/user`)
 
-### Get Profile
-Get current logged-in user's profile.
+### Get Own Profile
+Get current logged-in user's private profile.
 
 - **Endpoint**: `GET /user/profile`
-- **Response**:
+- **Response** (`UserResponse`):
   ```json
   {
     "id": 1,
     "username": "riddimz_user",
     "email": "user@example.com",
     "wallet_address": "SolanaAddress...",
-    "is_managed_wallet": true,
+    "display_name": "Display Name",
+    "bio": "Music lover",
+    "avatar_url": "https://cloudinary.com/...",
     "is_active": true,
+    "is_verified": false,
     "is_live": false,
-    "profile_image_url": "http://...",
-    "bio": "Music lover"
+    "current_stream_id": null
   }
   ```
+
+### Get Public Profile
+Get any user's public profile by username. Excludes sensitive data (email).
+
+- **Endpoint**: `GET /user/{username}`
+- **Response** (`UserPublicResponse`): Same as above, but without `email` and `wallet_address`.
+
+### Search Users
+Search for users by username or display name.
+
+- **Endpoint**: `GET /user/search/users`
+- **Query Params**:
+    - `query`: Search string
+    - `limit`: (Optional) max results (default 10)
+- **Response**: List of `UserPublicResponse` objects.
 
 ### Update Profile
-Update profile details.
+Update profile details. Supports multipart/form-data for avatar upload.
 
 - **Endpoint**: `PATCH /user/update`
-- **Body**:
-  ```json
-  {
-    "username": "new_name", // Optional
-    "email": "new@email.com", // Optional
-    "display_name": "John Doe", // Optional
-    "bio": "New bio", // Optional
-    "avatar_url": "http://..." // Optional
-  }
-  ```
+- **Form Data**:
+    - `username`: string (optional)
+    - `email`: string (optional)
+    - `display_name`: string (optional)
+    - `bio`: string (optional)
+    - `avatar`: file (optional, image)
+- **Response**: Updated `UserResponse`.
+- **Status Codes**: 200 (Success), 400 (Duplicate username/email).
 
 ### Get Earnings
-Get user's total earnings from gifts and sales.
+Get user's total earnings.
 
 - **Endpoint**: `GET /user/earnings`
 - **Response**:
   ```json
   {
     "user_id": 1,
-    "total_earnings": 150.50, // Total $RDMZ earned
+    "total_earnings": 150.50,
     "pending_earnings": 0.0
   }
   ```
@@ -172,36 +179,30 @@ Get a paginated list of tracks.
 - **Response**: Array of Track objects
 
 ### Create Track
-Upload/Create a new track metadata.
+Upload a new track audio file and metadata. Results are uploaded to Cloudinary.
 
 - **Endpoint**: `POST /content/tracks`
-- **Body**:
-  ```json
-  {
-    "title": "My Song",
-    "url": "https://storage.riddimz.io/song.mp3",
-    "artist_id": 1,
-    "is_nft": false,
-    "lyrics": "Lalala..." // Optional
-  }
-  ```
+- **Body** (Multipart Form):
+  - `title`: string
+  - `genre`: string (optional)
+  - `lyrics`: string (optional)
+  - `is_nft`: boolean (optional, default false)
+  - `file`: Audio file (MP3/WAV)
+  - `cover_art`: Image file (optional)
+- **Response**: Track object
 
 ### Podcast Series
 Manage Podcast Series.
 
 - **List**: `GET /content/podcasts`
 - **Query Params**: `skip` (0), `limit` (50)
-- **Create**: `POST /content/podcasts`
-- **Body**:
-  ```json
-  {
-    "title": "Tech Talk",
-    "description": "Talking about tech",
-    "cover_art_url": "http://...",
-    "category": "Technology",
-    "host_id": 1
-  }
-  ```
+- **Endpoint**: `POST /content/podcasts`
+- **Body** (Multipart Form):
+  - `title`: string
+  - `description`: string (optional)
+  - `category`: string (optional)
+  - `cover_art`: Image file (optional)
+- **Response**: Podcast Series object
 
 ### Podcast Episodes
 Manage Episodes for a Series.
@@ -209,15 +210,13 @@ Manage Episodes for a Series.
 - **List**: `GET /content/podcasts/{series_id}/episodes`
 - **Query Params**: `skip` (0), `limit` (50)
 - **Create**: `POST /content/episodes`
-- **Body**:
-  ```json
-  {
-    "series_id": 1,
-    "title": "Ep 1: Intro",
-    "url": "http://...",
-    "duration_seconds": 1200
-  }
-  ```
+- **Body** (Multipart Form):
+  - `series_id`: integer
+  - `title`: string
+  - `description`: string (optional)
+  - `episode_number`: integer (optional)
+  - `file`: Audio file
+- **Response**: Episode object
 
 ### Search
 Search tracks and podcasts.
@@ -274,6 +273,15 @@ Purchase an NFT. Mints a unique "Edition" to the buyer.
   }
   ```
 
+### List NFT for Sale
+List a owned NFT on the marketplace.
+- **Endpoint**: `PATCH /marketplace/list/{nft_id}`
+- **Query Params**: `price` (float)
+
+### Unlist NFT
+Remove NFT from marketplace.
+- **Endpoint**: `PATCH /marketplace/unlist/{nft_id}`
+
 ---
 
 ## 5. Token & Wallet (`/token`)
@@ -304,23 +312,14 @@ Send $RDMZ directly to another wallet address.
   ```
 
 ### Token Transfer
-Transfer tokens (RDMZ, USDT, or SOL) silently via managed wallet.
+Transfer tokens silently via managed wallet.
 
 - **Endpoint**: `POST /token/transfer`
 - **Body**:
   ```json
   {
     "to_wallet": "DestAddress...",
-    "amount": 10.0,
-    "memo": "Payment for service"
-  }
-  ```
-- **Response**:
-  ```json
-  {
-    "tx_hash": "...",
-    "status": "confirmed",
-    "amount": 9.8
+    "amount": 10.0
   }
   ```
 
@@ -337,22 +336,11 @@ Get latest token burn statistics.
   }
   ```
 
-### List Gifts
-Get available tiered gifts (for streaming/UI).
+### List Available Gifts
+Get available tiered gifts (Rose, Diamond, Crown).
 
 - **Endpoint**: `GET /token/gifts`
-- **Response**:
-  ```json
-  [
-    {
-      "id": 1,
-      "name": "Rose",
-      "value_rdmz": 1.0,
-      "animation_type": "particles"
-    },
-    ...
-  ]
-  ```
+- **Response**: List of Gift objects.
 
 ### Stream Gift
 Send a specific gift type during a stream (Background processed).
@@ -379,10 +367,17 @@ Send a specific gift type during a stream (Background processed).
 ## 6. Karaoke (`/karaoke`)
 
 ### Rooms
+## 6. Karaoke (`/karaoke`)
+
+### Rooms
 - **List**: `GET /karaoke/rooms`
 - **Query Params**: `skip` (0), `limit` (20)
 - **Create**: `POST /karaoke/rooms`
-  - Body: `{"name": "Party Room"}`
+  - Body (Multipart Form):
+    - `name`: string
+    - `track_id`: integer (optional)
+    - `cover_art`: Image file (optional)
+- **Response**: Karaoke Room object
 
 ### Join Approval
 - **Request Join**: `POST /karaoke/rooms/{room_id}/request-join`
@@ -391,35 +386,39 @@ Send a specific gift type during a stream (Background processed).
 - **Reject User**: `POST /karaoke/rooms/{room_id}/reject/{user_id}` (Host only)
 
 ### Queue Management
-- **Add Song**: `POST /karaoke/rooms/{room_id}/queue?track_id=123`
+- **Add Song**: `POST /karaoke/rooms/{room_id}/queue`
+  - Query Params: `track_id` (int)
   - Restriction: Only Host or Approved Participants.
 - **Next Song**: `POST /karaoke/rooms/{room_id}/next` (Host only)
 - **End Session**: `POST /karaoke/rooms/{room_id}/end` (Host only)
   - Deactivates the room and notifies participants via WebSocket.
 
-### Automated Lyrics Sync
+### Automated Lyrics Sync (Upload)
+Process a local file into karaoke assets. Results are uploaded to Cloudinary and cached.
+
 - **Endpoint**: `POST /karaoke/sync`
-- **Body** (Form Data):
+- **Body** (Multipart Form):
   - `file`: MP3/WAV audio file
   - `room_id`: ID of the room
-- **Response**:
+- **Response** (`LyricsSyncResponse`):
   ```json
   {
-    "room_id": "1",
-    "instrumental_url": "/static/karaoke/1/instrumental.wav",
-    "lyrics_vtt_url": "/static/karaoke/1/song.vtt",
-    "full_lyrics": "Verse 1..."
+    "instrumental_url": "https://res.cloudinary.com/...",
+    "vocals_url": "https://res.cloudinary.com/...",
+    "vtt_url": "https://res.cloudinary.com/...",
+    "lyrics": "Cleaned lyrics text..."
   }
   ```
 
 ### Song Search & Download
-- **Search Globally**: `GET /karaoke/search?query=song+name`
+- **Search Globally**: `GET /karaoke/search`
+  - Query Params: `query` (string), `limit` (10)
   - Uses `yt-dlp` to search YouTube/SoundCloud.
 - **Download & Sync**: `POST /karaoke/sync-download`
   - Body (Form Data):
     - `url`: YouTube/SoundCloud URL
     - `room_id`: ID of the room
-  - Automatically downloads, separates, and syncs.
+  - Automatically downloads, separates, and syncs. Returns cached result if song was processed before.
 
 ### Gifting (Karaoke)
 - **Gift Participant**: `POST /karaoke/rooms/{room_id}/gift`
@@ -461,7 +460,7 @@ Generates stream key for the user.
   ```
 
 ### Feeds
-Get list of live/trending streams.
+Get list of live/trending streams based on virality.
 
 - **Endpoint**: `GET /streaming/feeds`
 - **Query Params**: `skip` (0), `limit` (20)

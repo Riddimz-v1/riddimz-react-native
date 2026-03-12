@@ -15,6 +15,8 @@ import { CommentStream } from '@/components/organisms/Karaoke/CommentStream';
 const PRIMARY = Colors.dark.primary;
 type LyricsPosition = 'top' | 'center' | 'bottom';
 
+import { useKaraokeStore } from '@/stores/karaoke';
+
 interface ParticipantViewProps {
   messages: ChatMessage[];
   onSendMessage: (text: string) => void;
@@ -34,6 +36,8 @@ export function ParticipantView({
 }: ParticipantViewProps) {
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const [lyricsPos, setLyricsPos] = useState<LyricsPosition>('center');
+
+  const isPlaying = useKaraokeStore(s => s.isPlaying);
 
   const lyricsStyle =
     lyricsPos === 'top'    ? styles.lyricsTop :
@@ -72,12 +76,21 @@ export function ParticipantView({
       {/* ── Lyrics — repositionable ───────────────────────────────────────── */}
       <View style={[styles.lyricsWrapper, lyricsStyle]} pointerEvents="box-none">
         {currentSong ? (
-          <>
-            <ThemedText style={styles.lyricsLine}>"I'm blinded by the lights..."</ThemedText>
+          <View style={styles.lyricsBox}>
+            {!isPlaying && (
+              <View style={styles.pausedIndicator}>
+                <ThemedText style={styles.pausedIndicatorText}>PAUSED</ThemedText>
+              </View>
+            )}
+            <ThemedText style={[styles.lyricsLine, !isPlaying && { opacity: 0.4, transform: [{ scale: 0.9 }] }]}>
+              {currentSong.lyrics ? (
+                currentSong.lyrics.length > 60 ? currentSong.lyrics.slice(0, 60) + '...' : currentSong.lyrics
+              ) : '"Waiting for lyrics..."'}
+            </ThemedText>
             <ThemedText style={styles.lyricsTrack}>{currentSong.track_title || currentSong.title || 'Unknown Song'}</ThemedText>
-          </>
+          </View>
         ) : (
-          <ThemedText style={styles.lyricsHint}>Waiting for a song...</ThemedText>
+          <ThemedText style={styles.lyricsHint}>Waiting for host to start...</ThemedText>
         )}
 
         {/* Position controls */}
@@ -147,9 +160,13 @@ const styles = StyleSheet.create({
   lyricsTop:        { top: 110 },
   lyricsCenter:     { top: '35%' },
   lyricsBottom:     { bottom: 280 },
+  lyricsBox:        { alignItems: 'center', width: '100%' },
   lyricsLine:       { fontSize: 24, fontWeight: 'bold', color: '#fff', textAlign: 'center', textShadowColor: 'rgba(0,0,0,0.9)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 10 },
   lyricsTrack:      { fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 8, textAlign: 'center' },
   lyricsHint:       { fontSize: 14, color: 'rgba(255,255,255,0.25)', textAlign: 'center' },
+
+  pausedIndicator:      { backgroundColor: 'rgba(255,255,255,0.1)', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
+  pausedIndicatorText:  { color: 'rgba(255,255,255,0.5)', fontSize: 10, fontWeight: 'bold', letterSpacing: 2 },
 
   posRow:           { flexDirection: 'row', gap: 8, marginTop: 12 },
   posBtn:           { width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.06)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'transparent' },

@@ -10,7 +10,7 @@ export const karaokeService = {
     return restClient.get<RoomResponse>(`/karaoke/rooms/${roomId}`, { auth: false });
   },
 
-  createRoom: async (data: RoomCreate): Promise<RoomResponse> => {
+  createRoom: async (data: any): Promise<RoomResponse> => {
     return restClient.post<RoomResponse>('/karaoke/rooms', data);
   },
 
@@ -56,8 +56,8 @@ export const karaokeService = {
     return restClient.post<LyricsSyncResponse>('/karaoke/sync-download', formData);
   },
 
-  searchGlobally: async (query: string): Promise<KaraokeSearchResponse> => {
-    return restClient.get<KaraokeSearchResponse>(`/karaoke/search?query=${encodeURIComponent(query)}`);
+  searchGlobally: async (query: string, limit: number = 10): Promise<KaraokeSearchResponse> => {
+    return restClient.get<KaraokeSearchResponse>(`/karaoke/search?query=${encodeURIComponent(query)}&limit=${limit}`);
   },
 
   giftParticipant: async (roomId: string, data: GiftParticipantRequest): Promise<{ message: string }> => {

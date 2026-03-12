@@ -13,6 +13,7 @@ import { CommentStream } from '@/components/organisms/Karaoke/CommentStream';
 import { useWallet } from '@/hooks/useWallet';
 import { useRouter } from 'expo-router';
 import { KaraokeSocket } from '@/services/realtime/karaokeSocket';
+import { useKaraokeStore } from '@/stores/karaoke';
 
 const PRIMARY = Colors.dark.primary;
 
@@ -43,6 +44,7 @@ export function GuestView({
 }: GuestViewProps) {
   const router = useRouter();
   const { isConnected, gift } = useWallet();
+  const isPlaying = useKaraokeStore(s => s.isPlaying);
   const liveCount = participants.length + guests.length + 1;
 
   const handleGift = () => {
@@ -75,16 +77,23 @@ export function GuestView({
       {/* ── Main stream area ──────────────────────────────────────────────── */}
       <View style={styles.streamArea}>
         {activeStreamId ? (
-          <View style={styles.streamPlaceholder}>
-            <Ionicons name="radio" size={48} color="#2a2a2a" />
+          <View style={[styles.streamPlaceholder, !isPlaying && { opacity: 0.6 }]}>
+            <Ionicons 
+              name={isPlaying ? "radio" : "pause-circle-outline"} 
+              size={48} 
+              color={isPlaying ? PRIMARY : "#2a2a2a"} 
+            />
             <ThemedText style={styles.streamLabel}>
-              Viewing: {activeStreamId.slice(0, 8)}…
+              {isPlaying ? `Watching: ${activeStreamId.slice(0, 8)}…` : 'Host Paused the Show'}
             </ThemedText>
           </View>
         ) : (
           <View style={styles.streamPlaceholder}>
             <Ionicons name="mic-outline" size={52} color="#1e1e1e" />
             <ThemedText style={styles.streamLabel}>Waiting for performers…</ThemedText>
+            {!currentSong && (
+              <ThemedText style={styles.streamSubLabel}>Be the first to request a song! 🎤</ThemedText>
+            )}
           </View>
         )}
         <View style={styles.overlay} />
@@ -146,7 +155,12 @@ export function GuestView({
       {/* ── Lyrics (read-only) ────────────────────────────────────────────── */}
       {currentSong && (
         <View style={styles.lyricsArea} pointerEvents="none">
-          <ThemedText style={styles.lyricsLine}>"I'm blinded by the lights..."</ThemedText>
+          {!isPlaying && <ThemedText style={styles.pausedLabel}>PAUSED</ThemedText>}
+          <ThemedText style={[styles.lyricsLine, !isPlaying && { opacity: 0.4 }]}>
+            {currentSong.lyrics ? (
+              currentSong.lyrics.length > 60 ? currentSong.lyrics.slice(0, 60) + '...' : currentSong.lyrics
+            ) : '"Waiting for lyrics..."'}
+          </ThemedText>
           <ThemedText style={styles.lyricsTrack}>{currentSong.track_title || currentSong.title || 'Unknown Song'}</ThemedText>
         </View>
       )}
@@ -154,9 +168,14 @@ export function GuestView({
       {/* ── Bottom panel ──────────────────────────────────────────────────── */}
       <View style={styles.bottomPanel}>
         {/* Request to perform */}
-        <TouchableOpacity style={styles.requestBtn} onPress={onRequestToJoin}>
+        <TouchableOpacity 
+          style={[styles.requestBtn, !currentSong && styles.requestBtnProminent]} 
+          onPress={onRequestToJoin}
+        >
           <Ionicons name="videocam" size={16} color="#fff" />
-          <ThemedText style={styles.requestBtnText}>Request to Perform</ThemedText>
+          <ThemedText style={styles.requestBtnText}>
+            {!currentSong ? '🎤 Start the Show' : 'Request to Perform'}
+          </ThemedText>
         </TouchableOpacity>
 
         {/* Chat */}
@@ -177,8 +196,9 @@ const styles = StyleSheet.create({
   container:          { flex: 1, backgroundColor: '#000' },
 
   streamArea:         { ...StyleSheet.absoluteFillObject },
-  streamPlaceholder:  { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#080808', gap: 12 },
-  streamLabel:        { color: '#2a2a2a', fontSize: 13 },
+  streamPlaceholder:  { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#080808', gap: 12, paddingHorizontal: 40 },
+  streamLabel:        { color: '#2a2a2a', fontSize: 13, textAlign: 'center' },
+  streamSubLabel:     { color: '#1a1a1a', fontSize: 11, textAlign: 'center', marginTop: -4 },
   overlay:            { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.35)' },
 
   topBar:             { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: Platform.OS === 'ios' ? 56 : 36, paddingHorizontal: 16, paddingBottom: 12 },
@@ -207,12 +227,14 @@ const styles = StyleSheet.create({
 
   // Lyrics
   lyricsArea:         { position: 'absolute', left: 0, right: 0, top: '38%', alignItems: 'center', paddingHorizontal: 30 },
+  pausedLabel:        { color: 'rgba(255,255,255,0.3)', fontSize: 10, fontWeight: 'bold', letterSpacing: 2, marginBottom: 12 },
   lyricsLine:         { fontSize: 22, fontWeight: 'bold', color: '#fff', textAlign: 'center', textShadowColor: 'rgba(0,0,0,0.9)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 10 },
   lyricsTrack:        { fontSize: 12, color: 'rgba(255,255,255,0.45)', marginTop: 8, textAlign: 'center' },
 
   // Bottom panel
   bottomPanel:        { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(0,0,0,0.85)', borderTopWidth: 1, borderTopColor: '#1a1a1a', paddingTop: 12, paddingBottom: Platform.OS === 'ios' ? 32 : 16 },
-  requestBtn:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: PRIMARY, height: 44, borderRadius: 22, marginHorizontal: 16, marginBottom: 10 },
+  requestBtn:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#2a2a2a', height: 44, borderRadius: 22, marginHorizontal: 16, marginBottom: 10, borderWidth: 1, borderColor: '#333' },
+  requestBtnProminent:{ backgroundColor: PRIMARY, borderColor: PRIMARY },
   requestBtnText:     { color: '#fff', fontWeight: 'bold', fontSize: 14 },
   chatArea:           { height: 200 },
 });

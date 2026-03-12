@@ -6,7 +6,7 @@ export const contentService = {
     return restClient.get<TrackResponse[]>(`/content/tracks?skip=${skip}&limit=${limit}`, { auth: false });
   },
 
-  uploadTrack: async (track: TrackCreate): Promise<TrackResponse> => {
+  uploadTrack: async (track: any): Promise<TrackResponse> => {
     return restClient.post<TrackResponse>('/content/tracks', track);
   },
 
@@ -14,7 +14,7 @@ export const contentService = {
     return restClient.get<SeriesResp[]>(`/content/podcasts?skip=${skip}&limit=${limit}`, { auth: false });
   },
 
-  createPodcast: async (podcast: SeriesCreate): Promise<SeriesResp> => {
+  createPodcast: async (podcast: any): Promise<SeriesResp> => {
     return restClient.post<SeriesResp>('/content/podcasts', podcast);
   },
 
@@ -22,7 +22,7 @@ export const contentService = {
     return restClient.get<EpisodeResp[]>(`/content/podcasts/${seriesId}/episodes`, { auth: false });
   },
 
-  addEpisode: async (episode: EpisodeCreate): Promise<EpisodeResp> => {
+  addEpisode: async (episode: any): Promise<EpisodeResp> => {
     return restClient.post<EpisodeResp>('/content/episodes', episode);
   },
 
