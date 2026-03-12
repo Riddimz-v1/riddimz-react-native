@@ -34,9 +34,12 @@ export default function KaraokeRoomScreen() {
   const userRole          = useKaraokeStore(s => s.userRole);
   const activeStreamId    = useKaraokeStore(s => s.activeStreamId);
   const pendingRequests   = useKaraokeStore(s => s.pendingRequests);
+  const queue             = useKaraokeStore(s => s.queue);
 
   const setSong           = useKaraokeStore(s => s.setSong);
+  const setIsPlaying      = useKaraokeStore(s => s.setIsPlaying);
   const joinRoom          = useKaraokeStore(s => s.joinRoom);
+  const setQueue          = useKaraokeStore(s => s.setQueue);
   const leaveRoom         = useKaraokeStore(s => s.leaveRoom);
   const addParticipant    = useKaraokeStore(s => s.addParticipant);
   const removeParticipant = useKaraokeStore(s => s.removeParticipant);
@@ -125,6 +128,7 @@ export default function KaraokeRoomScreen() {
 
         // 1. Sync store state
         await joinRoom(roomId, role);
+        if (room.queue) setQueue(room.queue);
         
         // Add other existing participants to store
         room.current_participants?.forEach((uid: string) => {
@@ -148,6 +152,12 @@ export default function KaraokeRoomScreen() {
           switch (message.event) {
             case 'track_change':
               setSong(message.data);
+              break;
+            case 'soundtrack_play':
+              setIsPlaying(true);
+              break;
+            case 'soundtrack_pause':
+              setIsPlaying(false);
               break;
             case 'user_joined':
               const { userId, role: userRoleJoined } = message.data;
@@ -310,9 +320,10 @@ export default function KaraokeRoomScreen() {
           onEndSession={handleEndSession}
           participants={participants}
           guests={guests}
-          pendingRequests={pendingRequests}
+           pendingRequests={pendingRequests}
           onAcceptRequest={handleAcceptRequest}
           currentSong={currentSong}
+          queue={queue}
         />
         <RealtimeToastContainer />
       </>

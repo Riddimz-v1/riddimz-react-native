@@ -8,10 +8,12 @@ import {
   Platform,
 } from 'react-native';
 import { ThemedText } from '@/components/atoms/ThemedText';
+import { useKaraokeStore } from '@/stores/karaoke';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/utils/constants';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useState } from 'react';
+import { ActivityIndicator } from 'react-native';
 import { karaokeService } from '@/services/api/karaoke';
 import { ChatPanel, ChatMessage } from '@/components/organisms/Karaoke/ChatPanel';
 import { CommentStream } from '@/components/organisms/Karaoke/CommentStream';
@@ -33,6 +35,7 @@ interface HostViewProps {
   pendingRequests: string[];
   onAcceptRequest: (id: string) => void;
   currentSong: any;
+  queue: any[];
 }
 
 type Tab = 'chat' | 'queue' | 'requests';
@@ -50,6 +53,7 @@ export function HostView({
   pendingRequests,
   onAcceptRequest,
   currentSong,
+  queue,
 }: HostViewProps) {
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const [tab, setTab]                   = useState<Tab>('chat');
@@ -57,8 +61,9 @@ export function HostView({
   const [searchQuery, setSearchQuery]   = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching]   = useState(false);
-  const [queue, setQueue]               = useState<any[]>([]);
-  const [isPlaying, setIsPlaying]       = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const isPlaying                       = useKaraokeStore(s => s.isPlaying);
+  const setIsPlaying                    = useKaraokeStore(s => s.setIsPlaying);
 
   const liveCount = participants.length + guests.length + 1;
 
@@ -77,14 +82,22 @@ export function HostView({
   };
 
   const addToQueue = async (track: any) => {
+    setIsProcessing(true);
     try {
-      await karaokeService.addToQueue(roomId, track.url ?? track.id);
-      setQueue(prev => [...prev, track]);
+      // For YouTube/SoundCloud, we use syncDownload to let backend process it
+      const response = await karaokeService.syncDownload(roomId, track.url);
+      // Backend automatically adds to room state, we might need a socket broadcast 
+      // or just trust the next socket event. For now, we manually update local state if needed
+      socket?.sendMessage('queue_update', { track: response });
+      
       setShowSearch(false);
       setSearchQuery('');
       setSearchResults([]);
+      Alert.alert('Processing', 'Song is being prepared. It will appear in the queue shortly.');
     } catch {
       Alert.alert('Error', 'Failed to add song to queue.');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -97,11 +110,27 @@ export function HostView({
       });
       if (!result.canceled && result.assets?.[0]) {
         const file = result.assets[0];
-        setQueue(prev => [...prev, { title: file.name, url: file.uri, duration: '--' }]);
-        Alert.alert('Uploaded', `${file.name} added to queue.`);
+        setIsProcessing(true);
+        
+        try {
+          // Prepare file for FormData
+          const audioFile = {
+              uri: Platform.OS === 'ios' ? file.uri.replace('file://', '') : file.uri,
+              name: file.name,
+              type: 'audio/mpeg', // adjust if needed
+          };
+          
+          const response = await karaokeService.syncLyrics(roomId, audioFile);
+          socket?.sendMessage('queue_update', { track: response });
+          Alert.alert('Processing', 'Splitting stems & syncing lyrics. Please wait…');
+        } catch (e: any) {
+          Alert.alert('Upload Error', e.message || 'Could not process audio.');
+        } finally {
+          setIsProcessing(false);
+        }
       }
     } catch {
-      Alert.alert('Error', 'Could not upload file.');
+      Alert.alert('Error', 'Could not open file picker.');
     }
   };
 
@@ -164,20 +193,51 @@ export function HostView({
         </TouchableOpacity>
       )}
 
-      {/* ── Lyrics ────────────────────────────────────────────────────────── */}
+      {/* ── Lyrics / State Overlay ────────────────────────────────────────── */}
       <View style={styles.lyricsArea} pointerEvents="none">
         {currentSong ? (
-          <>
-            <ThemedText style={styles.lyricsLine}>"I'm blinded by the lights..."</ThemedText>
-            <ThemedText style={styles.lyricsTrack}>{currentSong.track_title || currentSong.title || 'Unknown Song'}</ThemedText>
-          </>
+          <View style={styles.lyricsContent}>
+            {!isPlaying && (
+              <View style={styles.pausedOverlay}>
+                <Ionicons name="pause-circle" size={40} color="rgba(255,255,255,0.4)" />
+                <ThemedText style={styles.pausedText}>Session Paused</ThemedText>
+              </View>
+            )}
+            <ThemedText style={[styles.lyricsLine, !isPlaying && { opacity: 0.5 }]}>
+              {currentSong.lyrics ? (
+                currentSong.lyrics.length > 60 ? currentSong.lyrics.slice(0, 60) + '...' : currentSong.lyrics
+              ) : '"Waiting for lyrics..."'}
+            </ThemedText>
+            <ThemedText style={styles.lyricsTrack}>
+              {currentSong.track_title || currentSong.title || 'Unknown Song'}
+            </ThemedText>
+            {isPlaying && (
+              <View style={styles.activeIndicator}>
+                <View style={styles.pulseDot} />
+                <ThemedText style={styles.activeIndicatorText}>Performing Live</ThemedText>
+              </View>
+            )}
+          </View>
         ) : (
-          <ThemedText style={styles.lyricsHint}>Search or upload a song to start</ThemedText>
+          <View style={styles.emptyQueuePrompt}>
+            <Ionicons name="musical-notes-outline" size={48} color="rgba(255,255,255,0.1)" />
+            <ThemedText style={styles.lyricsHint}>Queue is empty</ThemedText>
+            <ThemedText style={styles.subHint}>Search for a song to start the show</ThemedText>
+          </View>
         )}
       </View>
 
       {/* ── Comment stream overlay ────────────────────────────────────────── */}
       <CommentStream messages={messages} />
+
+      {/* ── Processing Indicator ──────────────────────────────────────────── */}
+      {isProcessing && (
+        <View style={styles.processingOverlay}>
+          <ActivityIndicator size="large" color={PRIMARY} />
+          <ThemedText style={styles.processingText}>Processing Soundtrack...</ThemedText>
+          <ThemedText style={styles.processingSubText}>Separating stems & syncing lyrics</ThemedText>
+        </View>
+      )}
 
       {/* ── Bottom panel ──────────────────────────────────────────────────── */}
       <View style={styles.bottomPanel}>
@@ -189,6 +249,7 @@ export function HostView({
             onPress={onToggleMic}
           >
             <Ionicons name={isMicOn ? 'mic' : 'mic-off'} size={20} color="#fff" />
+            {isMicOn && <View style={styles.micActivePulse} />}
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -349,6 +410,9 @@ export function HostView({
 
 const styles = StyleSheet.create({
   container:          { flex: 1, backgroundColor: '#000' },
+  processingOverlay:  { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', alignItems: 'center', zIndex: 100 },
+  processingText:     { color: '#fff', fontSize: 16, fontWeight: 'bold', marginTop: 20 },
+  processingSubText:  { color: 'rgba(255,255,255,0.5)', fontSize: 12, marginTop: 8 },
   noCamera:           { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0a0a0a' },
   enableCamBtn:       { marginTop: 10, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: PRIMARY },
   overlay:            { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.4)' },
@@ -370,9 +434,20 @@ const styles = StyleSheet.create({
   toastView:          { fontSize: 12, fontWeight: 'bold' },
 
   lyricsArea:         { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 30 },
+  lyricsContent:      { alignItems: 'center', width: '100%', position: 'relative' },
   lyricsLine:         { fontSize: 24, fontWeight: 'bold', color: '#fff', textAlign: 'center', textShadowColor: 'rgba(0,0,0,0.9)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 10 },
   lyricsTrack:        { fontSize: 13, color: 'rgba(255,255,255,0.5)', marginTop: 10, textAlign: 'center' },
-  lyricsHint:         { fontSize: 14, color: 'rgba(255,255,255,0.25)', textAlign: 'center' },
+  
+  pausedOverlay:      { position: 'absolute', top: -60, alignItems: 'center', zIndex: 10 },
+  pausedText:         { color: 'rgba(255,255,255,0.4)', fontSize: 12, fontWeight: 'bold', marginTop: 4, letterSpacing: 1 },
+  
+  activeIndicator:    { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 20, backgroundColor: 'rgba(118,51,181,0.2)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(118,51,181,0.3)' },
+  pulseDot:           { width: 6, height: 6, borderRadius: 3, backgroundColor: PRIMARY },
+  activeIndicatorText:{ color: PRIMARY, fontSize: 10, fontWeight: 'bold', letterSpacing: 0.5 },
+
+  emptyQueuePrompt:   { alignItems: 'center', gap: 8 },
+  lyricsHint:         { fontSize: 18, fontWeight: 'bold', color: 'rgba(255,255,255,0.3)', textAlign: 'center' },
+  subHint:            { fontSize: 13, color: 'rgba(255,255,255,0.15)', textAlign: 'center' },
 
   bottomPanel:        { backgroundColor: 'rgba(0,0,0,0.85)', borderTopWidth: 1, borderTopColor: '#1a1a1a', paddingTop: 12, paddingBottom: Platform.OS === 'ios' ? 32 : 16 },
   controlsRow:        { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, marginBottom: 10 },
@@ -380,6 +455,7 @@ const styles = StyleSheet.create({
   ctrlBtnDanger:      { backgroundColor: '#c0392b', borderColor: '#c0392b' },
   badge:              { position: 'absolute', top: -4, right: -4, width: 16, height: 16, borderRadius: 8, backgroundColor: PRIMARY, justifyContent: 'center', alignItems: 'center' },
   badgeText:          { fontSize: 9, fontWeight: 'bold', color: '#fff' },
+  micActivePulse:     { position: 'absolute', top: 4, right: 4, width: 8, height: 8, borderRadius: 4, backgroundColor: '#4ade80', borderWidth: 1.5, borderColor: '#000' },
 
   searchPanel:        { marginHorizontal: 16, marginBottom: 8, backgroundColor: '#111', borderRadius: 12, padding: 10, borderWidth: 1, borderColor: '#2a2a2a' },
   searchRow:          { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },

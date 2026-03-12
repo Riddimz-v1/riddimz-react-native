@@ -1,5 +1,5 @@
 import { FlashList, ListRenderItemInfo } from '@shopify/flash-list';
-import { View, StyleSheet, Dimensions, Image, useWindowDimensions } from 'react-native';
+import { View, StyleSheet, Dimensions, Image, useWindowDimensions, ActivityIndicator } from 'react-native';
 import { ThemedText } from '../atoms/ThemedText';
 import { useTheme } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -10,6 +10,7 @@ import { contentService } from '@/services/api/content';
 import { karaokeService } from '@/services/api/karaoke';
 import { FeedItem } from '@/services/api/types';
 import { Ionicons } from '@expo/vector-icons';
+import { Colors } from '@/utils/constants';
 
 function FeedCard({ item }: { item: FeedItem }) {
     const { colors } = useTheme();
@@ -45,17 +46,30 @@ export function InfiniteFeed() {
     const { width } = useWindowDimensions();
     const { isLargeScreen, isDesktop } = useResponsive();
     const [feeds, setFeeds] = useState<FeedItem[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
+    const [skip, setSkip] = useState(0);
+    const [hasMore, setHasMore] = useState(true);
+    const LIMIT = 10;
 
     const fetchFeeds = async (isRefresh = false) => {
-        setLoading(true);
+        if (loading || (!hasMore && !isRefresh)) return;
+        
+        if (isRefresh) {
+            setRefreshing(true);
+        } else {
+            setLoading(true);
+        }
+
+        const currentSkip = isRefresh ? 0 : skip;
+        
         try {
-            // Aggregate from multiple sources
+            // Aggregate from multiple sources using the current offset
             const [tracks, podcasts, streams, rooms] = await Promise.all([
-                contentService.getTracks(0, 5),
-                contentService.getPodcasts(0, 5),
-                streamingService.getFeeds(0, 5),
-                karaokeService.getRooms(0, 5)
+                contentService.getTracks(currentSkip, LIMIT / 2),
+                contentService.getPodcasts(currentSkip, LIMIT / 2),
+                streamingService.getFeeds(currentSkip, LIMIT / 2),
+                karaokeService.getRooms(currentSkip, LIMIT / 2)
             ]);
 
             const aggregated: FeedItem[] = [
@@ -65,13 +79,26 @@ export function InfiniteFeed() {
                 ...rooms.map(r => ({ id: r.id, type: 'stream' as const, title: `Karaoke: ${r.name}`, thumbnail_url: undefined }))
             ];
 
-            // Simple shuffle for variety
-            const shuffled = aggregated.sort(() => Math.random() - 0.5);
-            setFeeds(shuffled);
+            if (aggregated.length === 0) {
+                setHasMore(false);
+            } else {
+                // Simple shuffle for variety
+                const shuffled = aggregated.sort(() => Math.random() - 0.5);
+                
+                if (isRefresh) {
+                    setFeeds(shuffled);
+                    setSkip(LIMIT / 2); // Approximation of next skip
+                    setHasMore(true);
+                } else {
+                    setFeeds(prev => [...prev, ...shuffled]);
+                    setSkip(prev => prev + (LIMIT / 2));
+                }
+            }
         } catch (error) {
             console.error('Error fetching feeds:', error);
         } finally {
             setLoading(false);
+            setRefreshing(false);
         }
     };
 
@@ -86,12 +113,19 @@ export function InfiniteFeed() {
             <FlashList<FeedItem>
                 data={feeds}
                 renderItem={({ item }: ListRenderItemInfo<FeedItem>) => <FeedCard item={item} />}
-                onEndReached={() => fetchFeeds()}
+                onEndReached={() => fetchFeeds(false)}
                 onEndReachedThreshold={0.5}
                 numColumns={columnCount}
                 contentContainerStyle={{ padding: 10 }}
-                refreshing={loading && feeds.length === 0}
+                refreshing={refreshing}
                 onRefresh={() => fetchFeeds(true)}
+                ListFooterComponent={() => (
+                    loading ? (
+                        <View style={{ padding: 20 }}>
+                            <ActivityIndicator color={Colors.dark.primary} />
+                        </View>
+                    ) : null
+                )}
             />
         </View>
     );

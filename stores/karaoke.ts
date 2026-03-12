@@ -11,6 +11,8 @@ interface KaraokeState {
     currentSong: any | null; // Song object
     lyrics: any[]; // VTT cues
     userRole: UserRole;
+    isPlaying: boolean;
+    queue: any[];
     activeStreamId: string | 'me' | null;
     pendingRequests: string[]; // Group of User IDs requesting to join as peers
     
@@ -18,6 +20,8 @@ interface KaraokeState {
     joinRoom: (roomId: string, role?: UserRole) => Promise<void>;
     leaveRoom: () => void;
     setSong: (song: any) => void;
+    setIsPlaying: (isPlaying: boolean) => void;
+    setQueue: (queue: any[]) => void;
     addParticipant: (userId: string) => void;
     removeParticipant: (userId: string) => void;
     addGuest: (userId: string) => void;
@@ -38,6 +42,8 @@ export const useKaraokeStore = create<KaraokeState>((set) => ({
     currentSong: null,
     lyrics: [],
     userRole: 'guest',
+    isPlaying: false,
+    queue: [],
     activeStreamId: 'me',
     pendingRequests: [],
 
@@ -56,10 +62,14 @@ export const useKaraokeStore = create<KaraokeState>((set) => ({
         remoteStreams: {}, 
         currentSong: null, 
         userRole: 'guest',
+        isPlaying: false,
+        queue: [],
         activeStreamId: null,
         pendingRequests: []
     }),
     setSong: (song) => set({ currentSong: song }),
+    setIsPlaying: (isPlaying: boolean) => set({ isPlaying }),
+    setQueue: (queue) => set({ queue }),
     addParticipant: (userId) => set((state) => ({ 
         participants: state.participants.includes(userId) ? state.participants : [...state.participants, userId] 
     })),

@@ -1,6 +1,6 @@
 import {
     StyleSheet, View, ScrollView, TouchableOpacity,
-    Alert, KeyboardAvoidingView, Platform, ActivityIndicator
+    Alert, KeyboardAvoidingView, Platform, ActivityIndicator, Image
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ThemedText } from '@/components/atoms/ThemedText';
@@ -14,6 +14,7 @@ import { userService } from '@/services/api/user';
 import { useUserStore } from '@/stores/user';
 import { UserUpdate } from '@/services/api/types';
 import { Colors } from '@/utils/constants';
+import * as ImagePicker from 'expo-image-picker';
 
 export default function ProfileEditScreen() {
     const router = useRouter();
@@ -25,6 +26,8 @@ export default function ProfileEditScreen() {
     const [username, setUsername] = useState(profile?.username || '');
     const [displayName, setDisplayName] = useState(profile?.display_name || '');
     const [bio, setBio] = useState(profile?.bio || '');
+    const [email, setEmail] = useState(profile?.email || '');
+    const [avatarUri, setAvatarUri] = useState<string | null>(profile?.avatar_url || null);
 
     useEffect(() => {
         if (!profile) {
@@ -39,8 +42,23 @@ export default function ProfileEditScreen() {
             setUsername(profile.username || '');
             setDisplayName(profile.display_name || '');
             setBio(profile.bio || '');
+            setEmail(profile.email || '');
+            setAvatarUri(profile.avatar_url || null);
         }
     }, [profile]);
+
+    const pickImage = async () => {
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ['images'],
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.8,
+        });
+
+        if (!result.canceled) {
+            setAvatarUri(result.assets[0].uri);
+        }
+    };
 
     const handleSave = async () => {
         if (!username.trim()) {
@@ -50,13 +68,35 @@ export default function ProfileEditScreen() {
 
         setLoading(true);
         try {
-            const updateData: UserUpdate = {
+            const updateData: any = {
                 username: username.trim(),
                 display_name: displayName.trim() || undefined,
                 bio: bio.trim() || undefined,
+                email: email.trim() || undefined,
             };
-            await userService.updateProfile(updateData);
-            await fetchProfile(); // Sync the store with the new data
+
+            // If a new avatar was picked, we might need to handle it as FormData
+            // Check if URI is local or remote
+            if (avatarUri && !avatarUri.startsWith('http')) {
+                const formData = new FormData();
+                formData.append('username', updateData.username);
+                if (updateData.display_name) formData.append('display_name', updateData.display_name);
+                if (updateData.bio) formData.append('bio', updateData.bio);
+                if (updateData.email) formData.append('email', updateData.email);
+                
+                // @ts-ignore
+                formData.append('avatar', {
+                    uri: Platform.OS === 'ios' ? avatarUri.replace('file://', '') : avatarUri,
+                    name: 'avatar.jpg',
+                    type: 'image/jpeg',
+                });
+                
+                await userService.updateProfile(formData as any);
+            } else {
+                await userService.updateProfile(updateData);
+            }
+
+            await fetchProfile();
             Alert.alert('Saved', 'Your profile has been updated.', [
                 { text: 'OK', onPress: () => router.back() }
             ]);
@@ -93,12 +133,22 @@ export default function ProfileEditScreen() {
                 <ScrollView contentContainerStyle={styles.content}>
                     {/* Avatar placeholder */}
                     <View style={styles.avatarSection}>
-                        <View style={[styles.avatar, { backgroundColor: colors.secondary }]}>
-                            <ThemedText style={styles.avatarText}>
-                                {username?.charAt(0).toUpperCase() || 'R'}
-                            </ThemedText>
-                        </View>
-                        <TouchableOpacity style={styles.changeAvatarBtn}>
+                        <TouchableOpacity onPress={pickImage} style={[styles.avatar, { backgroundColor: colors.secondary }]}>
+                            {avatarUri ? (
+                                <Image 
+                                    source={{ uri: avatarUri }} 
+                                    style={styles.avatarImage} 
+                                />
+                            ) : (
+                                <ThemedText style={styles.avatarText}>
+                                    {username?.charAt(0).toUpperCase() || 'R'}
+                                </ThemedText>
+                            )}
+                            <View style={styles.editBadge}>
+                                <Ionicons name="camera" size={16} color="#fff" />
+                            </View>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.changeAvatarBtn} onPress={pickImage}>
                             <ThemedText style={[styles.changeAvatarText, { color: colors.primary }]}>
                                 Change Photo
                             </ThemedText>
@@ -129,10 +179,14 @@ export default function ProfileEditScreen() {
                             numberOfLines={4}
                         />
 
-                        <View style={[styles.readOnlyField, { backgroundColor: colors.secondary }]}>
-                            <ThemedText style={styles.readOnlyLabel}>Email</ThemedText>
-                            <ThemedText style={styles.readOnlyValue}>{profile?.email || '—'}</ThemedText>
-                        </View>
+                        <ThemedTextInput
+                            label="Email"
+                            placeholder="Enter your email"
+                            value={email}
+                            onChangeText={setEmail}
+                            autoCapitalize="none"
+                            keyboardType="email-address"
+                        />
                     </View>
                 </ScrollView>
 
@@ -176,6 +230,24 @@ const styles = StyleSheet.create({
     avatarText: {
         fontSize: 36,
         fontWeight: 'bold',
+    },
+    avatarImage: {
+        width: 90,
+        height: 90,
+        borderRadius: 45,
+    },
+    editBadge: {
+        position: 'absolute',
+        bottom: 0,
+        right: 0,
+        backgroundColor: Colors.dark.primary,
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 2,
+        borderColor: '#000',
     },
     changeAvatarBtn: { padding: 8 },
     changeAvatarText: { fontSize: 14, fontWeight: '600' },
