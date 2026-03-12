@@ -182,6 +182,9 @@ const styles = StyleSheet.create({
         fontSize: 36,
         fontWeight: 'bold',
         marginBottom: 16,
+        paddingTop: 8,
+        paddingBottom: 12,
+        lineHeight: 45, // Force enough height for bottom glyphs
     },
     addressContainer: {
         flexDirection: 'row',

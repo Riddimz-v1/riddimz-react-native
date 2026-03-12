@@ -236,15 +236,17 @@ const styles = StyleSheet.create({
     },
     earningItem: {
         alignItems: 'center',
+        paddingVertical: 5,
     },
     earningLabel: {
         fontSize: 12,
         opacity: 0.5,
-        marginBottom: 5,
+        marginBottom: 8,
     },
     earningValue: {
-        fontSize: 16,
+        fontSize: 18,
         fontWeight: 'bold',
+        paddingVertical: 2, 
     },
     divider: {
         width: 1,
