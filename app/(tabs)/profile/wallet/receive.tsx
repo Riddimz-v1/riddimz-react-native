@@ -1,4 +1,4 @@
-import { StyleSheet, View, TouchableOpacity, Alert } from 'react-native';
+import { StyleSheet, View, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ThemedText } from '@/components/atoms/ThemedText';
 import { ThemedView } from '@/components/atoms/ThemedView';
@@ -6,18 +6,22 @@ import { Ionicons } from '@expo/vector-icons';
 import { useWallet } from '@/hooks/useWallet';
 import { useTheme } from '@/hooks/useTheme';
 import * as Clipboard from 'expo-clipboard';
-
-// Placeholder for QR Code (install react-native-qrcode-svg if needed)
-const QRCodePlaceholder = () => (
-    <View style={{ width: 200, height: 200, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center' }}>
-        <ThemedText style={{ color: '#000', fontWeight: 'bold' }}>QR Code</ThemedText>
-    </View>
-);
+import QRCode from 'react-native-qrcode-svg';
+import { useEffect, useState } from 'react';
 
 export default function ReceiveScreen() {
     const router = useRouter();
     const { colors } = useTheme();
-    const { address } = useWallet();
+    const { address, connect } = useWallet();
+    const [initializing, setInitializing] = useState(!address);
+
+    // Ensure wallet is connected on screen load
+    useEffect(() => {
+        if (!address) {
+            setInitializing(true);
+            connect().finally(() => setInitializing(false));
+        }
+    }, []);
 
     const copyAddress = async () => {
         if (address) {
@@ -38,7 +42,28 @@ export default function ReceiveScreen() {
 
             <View style={styles.content}>
                 <View style={styles.qrContainer}>
-                    <QRCodePlaceholder />
+                    {initializing ? (
+                        <View style={styles.qrPlaceholder}>
+                            <ActivityIndicator size="large" color="#999" />
+                            <ThemedText style={styles.qrPlaceholderText}>
+                                Loading wallet...
+                            </ThemedText>
+                        </View>
+                    ) : address ? (
+                        <QRCode
+                            value={address}
+                            size={200}
+                            color="#000"
+                            backgroundColor="#fff"
+                        />
+                    ) : (
+                        <View style={styles.qrPlaceholder}>
+                            <Ionicons name="qr-code-outline" size={60} color="#999" />
+                            <ThemedText style={styles.qrPlaceholderText}>
+                                No wallet address found
+                            </ThemedText>
+                        </View>
+                    )}
                 </View>
 
                 <View style={styles.addressBox}>
@@ -113,5 +138,17 @@ const styles = StyleSheet.create({
         opacity: 0.5,
         textAlign: 'center',
         paddingHorizontal: 20,
-    }
+    },
+    qrPlaceholder: {
+        width: 200,
+        height: 200,
+        justifyContent: 'center',
+        alignItems: 'center',
+        gap: 12,
+    },
+    qrPlaceholderText: {
+        fontSize: 12,
+        color: '#999',
+        textAlign: 'center',
+    },
 });

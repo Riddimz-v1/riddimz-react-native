@@ -9,12 +9,19 @@ interface UserState {
     profile: UserResponse | null;
     settings: {
         notifications: boolean;
+        karaokeAlerts: boolean;
+        giftsAlerts: boolean;
+        newFollowers: boolean;
+        marketplaceAlerts: boolean;
+        emailDigest: boolean;
         publicProfile: boolean;
+        showWalletAddress: boolean;
     };
     
     updateProfile: (profile: UserResponse) => void;
     fetchProfile: () => Promise<void>;
     toggleNotification: () => void;
+    updateSettings: (newSettings: Partial<UserState['settings']>) => void;
 }
 
 export const useUserStore = create<UserState>()(
@@ -23,7 +30,13 @@ export const useUserStore = create<UserState>()(
             profile: null,
             settings: {
                 notifications: true,
+                karaokeAlerts: true,
+                giftsAlerts: true,
+                newFollowers: true,
+                marketplaceAlerts: false,
+                emailDigest: false,
                 publicProfile: true,
+                showWalletAddress: false,
             },
             
             updateProfile: (profile) => set({ profile }),
@@ -37,6 +50,9 @@ export const useUserStore = create<UserState>()(
             },
             toggleNotification: () => set((state) => ({ 
                 settings: { ...state.settings, notifications: !state.settings.notifications } 
+            })),
+            updateSettings: (newSettings) => set((state) => ({
+                settings: { ...state.settings, ...newSettings }
             })),
         }),
         {

@@ -22,19 +22,32 @@ export default function Index() {
             if (token) {
                 // Validate token by fetching profile
                 try {
-                    // Import userService dynamically to avoid circular dependencies if any
-                    const { userService } = require('@/services/api/user');
-                    await userService.getProfile();
-                    setHasAuth(true);
+                    // Import services dynamically to avoid circular dependencies
+                    const { useUserStore } = require('@/stores/user');
+                    const { useWalletStore } = require('@/stores/wallet');
+                    
+                    // Fetch and sync profile
+                    await useUserStore.getState().fetchProfile();
+                    
+                    // Verify if profile was actually fetched
+                    if (useUserStore.getState().profile) {
+                        setHasAuth(true);
+                        // Connect wallet store to fetch balances/address
+                        try {
+                            await useWalletStore.getState().connect();
+                        } catch (walletErr) {
+                            console.log('Wallet initialization failed in Index:', walletErr);
+                        }
+                    } else {
+                        // Profile fetch returned null/failed
+                        setHasAuth(false);
+                    }
                 } catch (err: any) {
                     console.log('Token validation failed:', err.message);
                     if (err.status === 401) {
                         await storage.removeItem('auth_token');
-                        setHasAuth(false);
-                    } else {
-                        // For other network errors, maybe don't clear token but stay on onboarding
-                        setHasAuth(false);
                     }
+                    setHasAuth(false);
                 }
             }
         } catch (e) {
