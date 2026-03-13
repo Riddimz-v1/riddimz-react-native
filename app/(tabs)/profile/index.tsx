@@ -1,4 +1,4 @@
-import { StyleSheet, View, ScrollView, RefreshControl, Platform, TouchableOpacity, Alert } from 'react-native';
+import { StyleSheet, View, ScrollView, RefreshControl, Platform, TouchableOpacity, Alert, Image } from 'react-native';
 import { ThemedText } from '@/components/atoms/ThemedText';
 import { ThemedView } from '@/components/atoms/ThemedView';
 import { Button } from '@/components/atoms/Button';
@@ -61,18 +61,30 @@ export default function ProfileScreen() {
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.dark.primary} />}
             >
                 <View style={styles.header}>
-                    <LinearGradient
-                        colors={BRAND_GRADIENT as any}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                        style={styles.avatarGradient}
+                    <TouchableOpacity 
+                        onPress={() => router.push('/(tabs)/profile/edit' as any)}
+                        activeOpacity={0.8}
                     >
-                        <View style={styles.avatarInner}>
-                            <ThemedText style={styles.avatarText}>
-                                {user?.username?.charAt(0).toUpperCase() || 'R'}
-                            </ThemedText>
-                        </View>
-                    </LinearGradient>
+                        <LinearGradient
+                            colors={BRAND_GRADIENT as any}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 1 }}
+                            style={styles.avatarGradient}
+                        >
+                            <View style={styles.avatarInner}>
+                                {user?.avatar_url ? (
+                                    <Image 
+                                        source={{ uri: user.avatar_url }} 
+                                        style={styles.avatarImage} 
+                                    />
+                                ) : (
+                                    <ThemedText style={styles.avatarText}>
+                                        {user?.username?.charAt(0).toUpperCase() || 'R'}
+                                    </ThemedText>
+                                )}
+                            </View>
+                        </LinearGradient>
+                    </TouchableOpacity>
                     
                     <ThemedText type="title" style={styles.username}>{user?.username || 'Riddimz User'}</ThemedText>
                     <ThemedText style={styles.email}>{user?.email}</ThemedText>
@@ -175,6 +187,11 @@ const styles = StyleSheet.create({
     avatarText: {
         fontSize: 40,
         fontWeight: 'bold',
+    },
+    avatarImage: {
+        width: 94,
+        height: 94,
+        borderRadius: 47,
     },
     username: {
         marginBottom: 5,

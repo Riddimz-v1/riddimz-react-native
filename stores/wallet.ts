@@ -14,7 +14,7 @@ export interface WalletState {
   refreshBalances: () => Promise<void>;
   disconnect: () => void;
   gift: (amount: number, recipientAddress: string) => Promise<boolean>;
-  send: (amount: number, recipientAddress: string, token: 'rdmz' | 'sol' | 'usdt') => Promise<boolean>;
+  send: (amount: number, recipientAddress: string, token: 'rdmz' | 'sol' | 'usdt', network?: string) => Promise<boolean>;
 }
 
 import { tokenService } from '../services/api/token';
@@ -99,11 +99,20 @@ export const useWalletStore = create<WalletState>()(
             return false;
         }
       },
-      send: async (amount: number, recipientAddress: string, token: 'rdmz' | 'sol' | 'usdt') => {
+      send: async (amount: number, recipientAddress: string, token: 'rdmz' | 'sol' | 'usdt', network: string = 'Solana') => {
           const { address, isConnected } = get();
           if (!isConnected || !address) return false;
 
+          console.log(`[WalletStore] send - amount: ${amount}, recipient: ${recipientAddress}, token: ${token}, network: ${network}`);
+
           try {
+              if (network !== 'Solana') {
+                  // Currently, we only support Solana in the logic layer
+                  // This is a placeholder for cross-chain logic or bridges
+                  console.warn(`[WalletStore] cross-chain transfer to ${network} not yet implemented`);
+                  return false;
+              }
+
               if (token === 'rdmz') {
                   await tokenService.transferTokens({
                       to_wallet: recipientAddress,

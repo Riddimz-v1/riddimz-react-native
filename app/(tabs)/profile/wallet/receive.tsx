@@ -36,7 +36,10 @@ export default function ReceiveScreen() {
                 <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
                     <Ionicons name="arrow-back" size={24} color={colors.text} />
                 </TouchableOpacity>
-                <ThemedText type="title">Receive</ThemedText>
+                <View>
+                    <ThemedText type="title">Receive</ThemedText>
+                    <ThemedText style={[styles.networkSubheader, { color: colors.primary }]}>Solana Network</ThemedText>
+                </View>
                 <View style={{ width: 24 }} />
             </View>
 
@@ -76,7 +79,7 @@ export default function ReceiveScreen() {
                 </View>
 
                 <ThemedText style={styles.notice}>
-                    Send only supported tokens (SOL, RDMZ, USDT) to this address. Sending other tokens may result in permanent loss.
+                    Send only supported tokens (SOL, RDMZ, USDT) to this address via the <ThemedText style={{ fontWeight: 'bold', color: colors.primary }}>Solana</ThemedText> network. Sending other tokens or using other networks may result in permanent loss.
                 </ThemedText>
             </View>
         </ThemedView>
@@ -151,4 +154,12 @@ const styles = StyleSheet.create({
         color: '#999',
         textAlign: 'center',
     },
+    networkSubheader: {
+        fontSize: 10,
+        fontWeight: 'bold',
+        textAlign: 'center',
+        marginTop: -4,
+        textTransform: 'uppercase',
+        letterSpacing: 1,
+    }
 });

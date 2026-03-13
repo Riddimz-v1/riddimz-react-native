@@ -65,6 +65,9 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
         ? JSON.stringify(data.detail) 
         : data?.detail || data?.message || 'An error occurred';
         
+    console.warn(`[RestClient] Error ${response.status} from ${url}:`, errorMessage);
+    console.warn(`[RestClient] Response data:`, JSON.stringify(data));
+        
     throw new ApiError(
       errorMessage,
       response.status,
