@@ -19,7 +19,8 @@ export interface UserUpdate {
 }
 
 export interface UserResponse {
-  id: number;
+  id: number | string;
+  user_id?: number | string; // Alias sometimes used in backend
   username: string;
   email: string;
   wallet_address: string;
@@ -34,7 +35,8 @@ export interface UserResponse {
 }
 
 export interface UserPublicResponse {
-  id: number;
+  id: number | string;
+  user_id?: number | string;
   username: string;
   display_name: string;
   bio: string;
@@ -46,7 +48,7 @@ export interface UserPublicResponse {
 }
 
 export interface UserEarnings {
-  user_id: number;
+  user_id: number | string;
   total_earnings: number;
   pending_earnings: number;
 }
