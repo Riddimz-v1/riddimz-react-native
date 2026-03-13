@@ -95,7 +95,11 @@ export default function WalletScreen() {
                             </View>
                             <View>
                                 <ThemedText style={styles.assetName}>Solana</ThemedText>
-                                <ThemedText style={styles.assetSymbol}>SOL</ThemedText>
+                                <View style={styles.symbolRow}>
+                                    <ThemedText style={styles.assetSymbol}>SOL</ThemedText>
+                                    <View style={{ width: 3, height: 3, borderRadius: 1.5, backgroundColor: 'rgba(255,255,255,0.2)', marginHorizontal: 2 }} />
+                                    <ThemedText style={styles.networkLabel}>Solana</ThemedText>
+                                </View>
                             </View>
                         </View>
                         <View style={styles.assetBalance}>
@@ -111,7 +115,11 @@ export default function WalletScreen() {
                             </View>
                             <View>
                                 <ThemedText style={styles.assetName}>Riddimz</ThemedText>
-                                <ThemedText style={styles.assetSymbol}>RDMZ</ThemedText>
+                                <View style={styles.symbolRow}>
+                                    <ThemedText style={styles.assetSymbol}>RDMZ</ThemedText>
+                                    <View style={{ width: 3, height: 3, borderRadius: 1.5, backgroundColor: 'rgba(255,255,255,0.2)', marginHorizontal: 2 }} />
+                                    <ThemedText style={styles.networkLabel}>Solana</ThemedText>
+                                </View>
                             </View>
                         </View>
                          <View style={styles.assetBalance}>
@@ -127,7 +135,11 @@ export default function WalletScreen() {
                             </View>
                             <View>
                                 <ThemedText style={styles.assetName}>Tether</ThemedText>
-                                <ThemedText style={styles.assetSymbol}>USDT</ThemedText>
+                                <View style={styles.symbolRow}>
+                                    <ThemedText style={styles.assetSymbol}>USDT</ThemedText>
+                                    <View style={{ width: 3, height: 3, borderRadius: 1.5, backgroundColor: 'rgba(255,255,255,0.2)', marginHorizontal: 2 }} />
+                                    <ThemedText style={styles.networkLabel}>Solana</ThemedText>
+                                </View>
                             </View>
                         </View>
                          <View style={styles.assetBalance}>
@@ -172,11 +184,44 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         alignItems: 'center',
         marginBottom: 30,
+        position: 'relative',
+    },
+    networkBadge: {
+        position: 'absolute',
+        top: 14,
+        right: 14,
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0, 255, 163, 0.08)',
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 20,
+        gap: 6,
+        borderWidth: 1,
+        borderColor: 'rgba(0, 255, 163, 0.15)',
+    },
+    dot: {
+        width: 5,
+        height: 5,
+        borderRadius: 2.5,
+        backgroundColor: '#00FFA3',
+        shadowColor: '#00FFA3',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 1,
+        shadowRadius: 4,
+    },
+    networkText: {
+        fontSize: 9,
+        fontWeight: 'bold',
+        color: '#00FFA3',
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
     },
     label: {
         fontSize: 14,
         opacity: 0.7,
         marginBottom: 8,
+        marginTop: 8,
     },
     totalAmount: {
         fontSize: 36,
@@ -253,9 +298,19 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         fontSize: 16,
     },
+    symbolRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+    },
     assetSymbol: {
         fontSize: 12,
         opacity: 0.6,
+    },
+    networkLabel: {
+        fontSize: 10,
+        color: 'rgba(255,255,255,0.4)',
+        fontWeight: '500',
     },
     assetBalance: {
         alignItems: 'flex-end',
